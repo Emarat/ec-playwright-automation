@@ -7,7 +7,7 @@ class LoginPage {
   }
 
   async gotoLoginPage(url) {
-    await this.page.goto(url);
+    await this.page.goto(url, { timeout: 60000 });
   }
 
   async login(username, password) {
