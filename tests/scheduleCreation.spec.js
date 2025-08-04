@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
+const { LoginPage } = require('../pages/LoginPage');
 const { ScheduleCreationPage } = require('../pages/scheduleCreation');
-const { baseURL } = require('../config/testData');
+const environmentConfig = require('../config/environmentConfig');
 
 test.use({ storageState: 'storage/loginAuth.json' });
 
@@ -117,8 +118,8 @@ test('Dynamic Schedule Creation Form Submission', async ({ page }) => {
 
   try {
     // Navigate to base URL and find schedule management
-    console.log(`Navigating to: ${baseURL}`);
-    await page.goto(baseURL, { timeout: 30000 });
+    console.log(`Navigating to: ${environmentConfig.baseURL}`);
+    await page.goto(environmentConfig.baseURL, { timeout: 30000 });
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
@@ -154,6 +155,18 @@ test('Dynamic Schedule Creation Form Submission', async ({ page }) => {
     // Fill the schedule form
     console.log('Filling schedule form...');
     await schedulePage.fillScheduleForm(electionDetails);
+
+    // ✅ VERIFICATION: Ensure election type and schedule name match
+    console.log('🔍 Verifying election type and schedule name consistency...');
+    console.log(`📋 Expected Election Type: "${electionDetails.electionType}"`);
+    console.log(`📝 Generated Schedule Name: "${electionDetails.electionName}"`);
+    
+    // Verify that the schedule name contains the election type
+    if (!electionDetails.electionName.includes(electionDetails.electionType)) {
+      throw new Error(`❌ Mismatch! Schedule name "${electionDetails.electionName}" does not contain election type "${electionDetails.electionType}"`);
+    }
+    
+    console.log('✅ Verification passed: Election type and schedule name are consistent');
 
     // Navigate through tabs
     console.log('Navigating through tabs...');
