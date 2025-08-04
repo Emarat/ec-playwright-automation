@@ -193,24 +193,28 @@ class ScheduleCreationPage {
   async selectElectionType(electionType) {
     try {
       console.log(`🎯 Attempting to select election type: "${electionType}"`);
-      
+
       // Wait for the dropdown to be visible and clickable
       await this.electionTypeDropdown.waitFor({
         state: 'visible',
         timeout: 10000,
       });
-      
+
       // Take screenshot before clicking dropdown for debugging
-      await this.page.screenshot({ path: 'test-artifacts/before-dropdown-click.png' });
-      
+      await this.page.screenshot({
+        path: 'test-artifacts/before-dropdown-click.png',
+      });
+
       await this.electionTypeDropdown.click({ force: true });
       console.log('✓ Clicked election type dropdown');
 
       // Wait for dropdown options to appear and load completely
       await this.page.waitForTimeout(3000);
-      
+
       // Take screenshot after dropdown opens
-      await this.page.screenshot({ path: 'test-artifacts/dropdown-opened.png' });
+      await this.page.screenshot({
+        path: 'test-artifacts/dropdown-opened.png',
+      });
 
       // Wait for dropdown content to be fully loaded
       await this.page.waitForLoadState('networkidle', { timeout: 10000 });
@@ -231,36 +235,47 @@ class ScheduleCreationPage {
 
       let optionClicked = false;
       let availableOptions = [];
-      
+
       // First, get all available options by scrolling through the dropdown
       try {
         console.log('📋 Scanning all available options in dropdown...');
-        
+
         // Find the dropdown container that might be scrollable
-        const dropdownContainer = this.page.locator('div[class*="dropdown"], div[class*="select"], ul[class*="option"]').first();
-        
+        const dropdownContainer = this.page
+          .locator(
+            'div[class*="dropdown"], div[class*="select"], ul[class*="option"]'
+          )
+          .first();
+
         // Get initial options
         const optionSelectors = [
           'div.select-menu-item', // This is the correct selector based on debug output
           'div[class*="select-menu-item"]',
           'div[class*="menu-item"]',
-          'div[class*="option"]', 
-          'li[class*="option"]', 
-          'option', 
-          'div[role="option"]', 
-          'li[role="option"]'
+          'div[class*="option"]',
+          'li[class*="option"]',
+          'option',
+          'div[role="option"]',
+          'li[role="option"]',
         ];
         let allOptions = [];
-        
+
         for (const optionSelector of optionSelectors) {
           try {
-            const options = await this.page.locator(optionSelector).allTextContents();
+            const options = await this.page
+              .locator(optionSelector)
+              .allTextContents();
             if (options.length > 0) {
-              allOptions = options.filter(opt => opt.trim().length > 0 && opt.trim() !== 'NO DATA');
-              console.log(`📋 Found ${allOptions.length} options using selector: ${optionSelector}`);
-              
+              allOptions = options.filter(
+                (opt) => opt.trim().length > 0 && opt.trim() !== 'NO DATA'
+              );
+              console.log(
+                `📋 Found ${allOptions.length} options using selector: ${optionSelector}`
+              );
+
               // If we got good options, use them
-              if (allOptions.length > 5) { // Assuming we should have multiple election types
+              if (allOptions.length > 5) {
+                // Assuming we should have multiple election types
                 break;
               }
             }
@@ -268,48 +283,58 @@ class ScheduleCreationPage {
             continue;
           }
         }
-        
+
         availableOptions = allOptions;
         console.log('📋 Available options in dropdown:', availableOptions);
-        
+
         // If we have a scrollable container, scroll to ensure all options are loaded
         if (availableOptions.length === 0 || availableOptions.length < 5) {
-          console.log('🔄 Attempting to scroll in dropdown to load more options...');
-          
+          console.log(
+            '🔄 Attempting to scroll in dropdown to load more options...'
+          );
+
           try {
             // Try scrolling in different potential containers
             const scrollContainers = [
               'div[class*="dropdown"]',
-              'div[class*="select"]', 
+              'div[class*="select"]',
               'ul[class*="option"]',
               'div[class*="menu"]',
               '.dropdown-menu',
-              '[role="listbox"]'
+              '[role="listbox"]',
             ];
-            
+
             for (const containerSelector of scrollContainers) {
               try {
                 const container = this.page.locator(containerSelector).first();
                 if (await container.isVisible({ timeout: 2000 })) {
-                  console.log(`📜 Scrolling in container: ${containerSelector}`);
-                  
+                  console.log(
+                    `📜 Scrolling in container: ${containerSelector}`
+                  );
+
                   // Scroll down multiple times to ensure all options are loaded
                   for (let i = 0; i < 5; i++) {
-                    await container.evaluate(el => el.scrollTop += 200);
+                    await container.evaluate((el) => (el.scrollTop += 200));
                     await this.page.waitForTimeout(500);
                   }
-                  
+
                   // Scroll back to top
-                  await container.evaluate(el => el.scrollTop = 0);
+                  await container.evaluate((el) => (el.scrollTop = 0));
                   await this.page.waitForTimeout(500);
-                  
+
                   // Re-scan options after scrolling
                   for (const optionSelector of optionSelectors) {
                     try {
-                      const options = await this.page.locator(optionSelector).allTextContents();
+                      const options = await this.page
+                        .locator(optionSelector)
+                        .allTextContents();
                       if (options.length > availableOptions.length) {
-                        availableOptions = options.filter(opt => opt.trim().length > 0);
-                        console.log(`📋 After scrolling, found ${availableOptions.length} options`);
+                        availableOptions = options.filter(
+                          (opt) => opt.trim().length > 0
+                        );
+                        console.log(
+                          `📋 After scrolling, found ${availableOptions.length} options`
+                        );
                         break;
                       }
                     } catch (e) {
@@ -323,10 +348,12 @@ class ScheduleCreationPage {
               }
             }
           } catch (scrollError) {
-            console.log('⚠️ Could not scroll in dropdown:', scrollError.message);
+            console.log(
+              '⚠️ Could not scroll in dropdown:',
+              scrollError.message
+            );
           }
         }
-        
       } catch (e) {
         console.log('Could not get available options:', e.message);
       }
@@ -335,26 +362,32 @@ class ScheduleCreationPage {
       for (const selector of selectors) {
         try {
           const option = this.page.locator(selector).first();
-          
+
           // Check if option exists (even if not visible due to scrolling)
           const optionCount = await this.page.locator(selector).count();
           if (optionCount > 0) {
-            console.log(`🎯 Found option "${electionType}" using selector: ${selector}`);
-            
+            console.log(
+              `🎯 Found option "${electionType}" using selector: ${selector}`
+            );
+
             // Scroll the option into view if needed
             try {
               await option.scrollIntoViewIfNeeded({ timeout: 5000 });
               await this.page.waitForTimeout(1000);
             } catch (scrollError) {
-              console.log('⚠️ Could not scroll option into view, attempting click anyway');
+              console.log(
+                '⚠️ Could not scroll option into view, attempting click anyway'
+              );
             }
-            
+
             // Wait for the option to be visible
             await option.waitFor({ state: 'visible', timeout: 5000 });
-            
+
             const optionText = await option.textContent();
-            console.log(`✓ Found matching option: "${optionText}" using selector: ${selector}`);
-            
+            console.log(
+              `✓ Found matching option: "${optionText}" using selector: ${selector}`
+            );
+
             await option.click({ force: true });
             optionClicked = true;
             console.log(`✅ Successfully selected: "${electionType}"`);
@@ -368,25 +401,29 @@ class ScheduleCreationPage {
 
       // If exact selector match failed, try direct menu item scanning
       if (!optionClicked) {
-        console.log('🔍 Exact selectors failed, scanning menu items directly...');
+        console.log(
+          '🔍 Exact selectors failed, scanning menu items directly...'
+        );
         try {
           const menuItems = this.page.locator('div.select-menu-item');
           const itemCount = await menuItems.count();
           console.log(`Found ${itemCount} menu items to scan`);
-          
+
           for (let i = 0; i < itemCount; i++) {
             const item = menuItems.nth(i);
             const itemText = await item.textContent();
             const trimmedText = itemText?.trim() || '';
-            
+
             console.log(`Checking item ${i + 1}: "${trimmedText}"`);
-            
+
             // Use normalized text comparison to handle Bengali Unicode variations
             const normalizedItemText = trimmedText.normalize();
             const normalizedElectionType = electionType.normalize();
-            
+
             if (normalizedItemText === normalizedElectionType) {
-              console.log(`🎯 Found exact match at position ${i + 1} (normalized)`);
+              console.log(
+                `🎯 Found exact match at position ${i + 1} (normalized)`
+              );
               await item.click({ force: true });
               optionClicked = true;
               console.log(`✅ Successfully selected: "${electionType}"`);
@@ -400,32 +437,39 @@ class ScheduleCreationPage {
 
       if (!optionClicked) {
         // Try fuzzy matching as last resort with normalized text
-        console.warn(`⚠️ Exact match for "${electionType}" not found. Trying fuzzy matching...`);
-        
+        console.warn(
+          `⚠️ Exact match for "${electionType}" not found. Trying fuzzy matching...`
+        );
+
         const normalizedElectionType = electionType.normalize();
-        
+
         for (const availableOption of availableOptions) {
           const normalizedAvailableOption = availableOption.normalize();
-          
-          if (normalizedAvailableOption.includes(normalizedElectionType) || normalizedElectionType.includes(normalizedAvailableOption)) {
+
+          if (
+            normalizedAvailableOption.includes(normalizedElectionType) ||
+            normalizedElectionType.includes(normalizedAvailableOption)
+          ) {
             try {
               // Try to find this option in the menu items
               const menuItems = this.page.locator('div.select-menu-item');
               const itemCount = await menuItems.count();
-              
+
               for (let i = 0; i < itemCount; i++) {
                 const item = menuItems.nth(i);
                 const itemText = await item.textContent();
                 const normalizedItemText = itemText?.trim().normalize() || '';
-                
+
                 if (normalizedItemText === normalizedAvailableOption) {
-                  console.log(`✅ Selected via fuzzy matching: "${availableOption}" for requested "${electionType}"`);
+                  console.log(
+                    `✅ Selected via fuzzy matching: "${availableOption}" for requested "${electionType}"`
+                  );
                   await item.click({ force: true });
                   optionClicked = true;
                   break;
                 }
               }
-              
+
               if (optionClicked) break;
             } catch (e) {
               continue;
@@ -435,26 +479,37 @@ class ScheduleCreationPage {
       }
 
       if (!optionClicked) {
-        console.error(`❌ Could not find election type "${electionType}" in dropdown`);
+        console.error(
+          `❌ Could not find election type "${electionType}" in dropdown`
+        );
         console.error('Available options were:', availableOptions);
-        
+
         // Take final screenshot for debugging
-        await this.page.screenshot({ path: 'test-artifacts/election-type-not-found.png' });
-        
-        throw new Error(`Election type "${electionType}" not found in dropdown. Available options: ${availableOptions.join(', ')}`);
+        await this.page.screenshot({
+          path: 'test-artifacts/election-type-not-found.png',
+        });
+
+        throw new Error(
+          `Election type "${electionType}" not found in dropdown. Available options: ${availableOptions.join(
+            ', '
+          )}`
+        );
       }
 
       // Verify selection was successful
       await this.page.waitForTimeout(1000);
-      
+
       // Take screenshot after selection
-      await this.page.screenshot({ path: 'test-artifacts/after-election-type-selection.png' });
-      
+      await this.page.screenshot({
+        path: 'test-artifacts/after-election-type-selection.png',
+      });
+
       await this.page.waitForLoadState('networkidle', { timeout: 10000 });
-      
     } catch (e) {
       console.error('❌ Failed to select election type:', e.message);
-      await this.page.screenshot({ path: 'test-artifacts/election-type-selection-error.png' });
+      await this.page.screenshot({
+        path: 'test-artifacts/election-type-selection-error.png',
+      });
       throw e;
     }
   }
