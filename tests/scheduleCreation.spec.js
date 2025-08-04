@@ -182,6 +182,18 @@ test('Dynamic Schedule Creation Form Submission', async ({ page }) => {
     console.log('Filling schedule form...');
     await schedulePage.fillScheduleForm(electionDetails);
 
+    // ✅ VERIFICATION: Ensure election type and schedule name match
+    console.log('🔍 Verifying election type and schedule name consistency...');
+    console.log(`📋 Expected Election Type: "${electionDetails.electionType}"`);
+    console.log(`📝 Generated Schedule Name: "${electionDetails.electionName}"`);
+    
+    // Verify that the schedule name contains the election type
+    if (!electionDetails.electionName.includes(electionDetails.electionType)) {
+      throw new Error(`❌ Mismatch! Schedule name "${electionDetails.electionName}" does not contain election type "${electionDetails.electionType}"`);
+    }
+    
+    console.log('✅ Verification passed: Election type and schedule name are consistent');
+
     // Navigate through tabs
     console.log('Navigating through tabs...');
     await schedulePage.clickNextTab();
