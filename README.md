@@ -57,7 +57,7 @@ See [USER_INPUT_GUIDE.md](./USER_INPUT_GUIDE.md) for detailed configuration opti
 ├── .env                    # Configuration file (create from .env.example)
 ├── .env.example           # Environment template
 ├── config/
-│   └── testData.js        # Environment-aware configuration
+│   └── environmentConfig.js # Environment-aware configuration
 ├── scripts/
 │   └── run-election-test.js # Interactive test runner
 ├── tests/

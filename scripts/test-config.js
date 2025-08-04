@@ -7,19 +7,21 @@
  * all settings are loaded correctly from .env file.
  */
 
-const testData = require('../config/testData');
+const environmentConfig = require('../config/environmentConfig');
 
 console.log('\n🔧 Configuration Test Results\n');
 console.log('='.repeat(50));
 
 console.log('\n📋 Current Settings:');
-console.log(`   Base URL: ${testData.baseURL}`);
-console.log(`   Username: ${testData.validUser.username}`);
-console.log(`   Password: ${testData.validUser.password ? '***' : 'Not set'}`);
-console.log(`   Headless Mode: ${testData.headless}`);
-console.log(`   Debug Mode: ${testData.debug}`);
-console.log(`   Election Type: ${testData.electionType}`);
-console.log(`   Test File Path: ${testData.testFilePath}`);
+console.log(`   Base URL: ${environmentConfig.baseURL}`);
+console.log(`   Username: ${environmentConfig.validUser.username}`);
+console.log(
+  `   Password: ${environmentConfig.validUser.password ? '***' : 'Not set'}`
+);
+console.log(`   Headless Mode: ${environmentConfig.headless}`);
+console.log(`   Debug Mode: ${environmentConfig.debug}`);
+console.log(`   Election Type: ${environmentConfig.electionType}`);
+console.log(`   Test File Path: ${environmentConfig.testFilePath}`);
 
 console.log('\n🌍 Environment Variables:');
 console.log(`   ENVIRONMENT: ${process.env.ENVIRONMENT || 'Not set'}`);

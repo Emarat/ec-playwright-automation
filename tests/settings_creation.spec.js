@@ -1,5 +1,5 @@
-const { test } = require('@playwright/test');
-const { baseURL } = require('../config/testData');
+const { test, expect } = require('@playwright/test');
+const { baseURL } = require('../config/environmentConfig');
 const { SettingsCreationPage } = require('../pages/settings_creation.js');
 
 test('Settings Creation', async ({ page }) => {
