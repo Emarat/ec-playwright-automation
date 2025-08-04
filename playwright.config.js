@@ -5,9 +5,9 @@ import { defineConfig, devices } from '@playwright/test';
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -50,8 +50,12 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'storage/loginAuth.json',
+        headless: process.env.HEADLESS_MODE === 'true', // Use environment variable
+        viewport: { width: 1920, height: 1080 },
+        video: 'retain-on-failure',
+        screenshot: 'only-on-failure',
       },
-      dependencies: ['setup'],
+      // dependencies: ['setup'], // Temporarily commented out to bypass network issues
     },
 
     // {
