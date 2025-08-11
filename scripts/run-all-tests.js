@@ -342,9 +342,12 @@ async function runAllTests(
     log('═'.repeat(60), 'cyan');
 
     // Build list of test files to run
-    const testFiles = testsToRun.map(test => `tests/${test.file}`);
-    
-    log('🎬 Running all tests in a single execution to preserve videos...', 'blue');
+    const testFiles = testsToRun.map((test) => `tests/${test.file}`);
+
+    log(
+      '🎬 Running all tests in a single execution to preserve videos...',
+      'blue'
+    );
     log(`📝 Test files: ${testFiles.join(', ')}`, 'blue');
 
     // Run all tests in one command to preserve all videos
@@ -367,22 +370,29 @@ async function runAllTests(
 
     log('\n📊 Test artifacts generated:', 'blue');
     log('   📈 HTML Report: playwright-report/index.html', 'blue');
-    
+
     // Count and display video files
     try {
-      const videoFiles = fs.readdirSync('test-results', { withFileTypes: true })
-        .filter(dirent => dirent.isDirectory())
-        .map(dirent => {
-          const videoPath = path.join('test-results', dirent.name, 'video.webm');
+      const videoFiles = fs
+        .readdirSync('test-results', { withFileTypes: true })
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => {
+          const videoPath = path.join(
+            'test-results',
+            dirent.name,
+            'video.webm'
+          );
           return fs.existsSync(videoPath) ? videoPath : null;
         })
         .filter(Boolean);
-        
+
       if (videoFiles.length > 0) {
         log(`   � Videos (${videoFiles.length} recorded):`, 'green');
-        videoFiles.forEach(video => {
+        videoFiles.forEach((video) => {
           const testName = path.dirname(video).split('/')[1];
-          const simpleName = testName.replace(/-chromium$/, '').replace(/-/g, ' ');
+          const simpleName = testName
+            .replace(/-chromium$/, '')
+            .replace(/-/g, ' ');
           log(`      • ${simpleName}`, 'blue');
         });
       } else {
@@ -391,12 +401,9 @@ async function runAllTests(
     } catch (error) {
       log('   � Videos: Check test-results/ directory', 'blue');
     }
-    
+
     log('   📸 Screenshots: Available for failed tests', 'blue');
-    log(
-      '   🔍 Traces: Available for retried tests',
-      'blue'
-    );
+    log('   🔍 Traces: Available for retried tests', 'blue');
   } catch (error) {
     log('\n💥 Test execution failed!', 'red');
     log(`Error: ${error.message}`, 'red');

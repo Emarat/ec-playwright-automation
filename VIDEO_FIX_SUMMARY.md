@@ -7,6 +7,7 @@ Your issue where **only the second test's video was being recorded** has been fi
 ## 🔍 **What Was the Problem:**
 
 When running tests with separate `playwright test` commands like this:
+
 ```bash
 npx playwright test tests/scheduleCreation.spec.js
 npx playwright test tests/settings_creation.spec.js
@@ -17,13 +18,17 @@ Each command would run independently and potentially overwrite the previous test
 ## ✅ **The Solution:**
 
 ### 1. **Single Test Execution:**
+
 Now the script runs all tests in **one command**:
+
 ```bash
 npx playwright test tests/scheduleCreation.spec.js tests/settings_creation.spec.js
 ```
 
 ### 2. **Sequential Execution Configuration:**
+
 Updated `playwright.config.js`:
+
 ```javascript
 fullyParallel: false,    // Run tests sequentially
 workers: 1,              // Use single worker
@@ -31,18 +36,20 @@ video: 'on',            // Record ALL tests
 ```
 
 ### 3. **Enhanced Video Reporting:**
+
 The script now shows exactly which videos were recorded:
+
 ```
 📹 Videos (3 recorded):
    • scheduleCreation Dynamic Schedule Creation Form Submission
-   • settings_creation Create S d5a6b with Specific Schedule Name  
+   • settings_creation Create S d5a6b with Specific Schedule Name
    • settings_creation Create S 903c0 r Recently Created Schedule
 ```
 
 ## 🎬 **Current Video Status:**
 
 ✅ **Schedule Creation Test**: Video recorded  
-✅ **Settings Creation Test**: Videos recorded (both test cases)  
+✅ **Settings Creation Test**: Videos recorded (both test cases)
 
 **Total Videos**: 3 video files generated
 
@@ -74,6 +81,7 @@ npm test
 ## 📊 **HTML Report:**
 
 The HTML report now includes:
+
 - ✅ **All test results** in one report
 - ✅ **Embedded videos** for each test
 - ✅ **Complete test timeline**
@@ -82,12 +90,14 @@ The HTML report now includes:
 ## 🔧 **Technical Changes Made:**
 
 ### `playwright.config.js`:
+
 - `fullyParallel: false` - Sequential test execution
 - `workers: 1` - Single worker to prevent conflicts
 - `video: 'on'` - Record all tests
 - `outputDir: 'test-results'` - Consistent output directory
 
 ### `scripts/run-all-tests.js`:
+
 - Single command execution for all tests
 - Enhanced video reporting with counts
 - Better artifact information display
@@ -96,7 +106,7 @@ The HTML report now includes:
 
 ## 📝 **Next Steps:**
 
-1. Run `npm test` 
+1. Run `npm test`
 2. Check the video count in the output
 3. View the HTML report to see all videos embedded
 4. All test recordings will be preserved! 🎬

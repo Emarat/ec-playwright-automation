@@ -36,11 +36,11 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
-  
+
   /* Global setup and teardown */
   globalSetup: undefined,
   globalTeardown: undefined,
-  
+
   /* Configure output directories */
   outputDir: 'test-results', // Ensure consistent output directory
 
