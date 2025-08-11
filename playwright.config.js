@@ -15,15 +15,19 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 export default defineConfig({
   testDir: './tests',
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false, // Changed to false to run tests sequentially
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1, // Force single worker to ensure sequential execution
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['list'], // For console output during test run
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -32,6 +36,13 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
+  
+  /* Global setup and teardown */
+  globalSetup: undefined,
+  globalTeardown: undefined,
+  
+  /* Configure output directories */
+  outputDir: 'test-results', // Ensure consistent output directory
 
   /* Configure projects for major browsers */
   projects: [
@@ -52,8 +63,9 @@ export default defineConfig({
         storageState: 'storage/loginAuth.json',
         headless: process.env.HEADLESS_MODE === 'true', // Use environment variable
         viewport: { width: 1920, height: 1080 },
-        video: 'retain-on-failure',
+        video: 'on', // Always record videos
         screenshot: 'only-on-failure',
+        trace: 'on-first-retry', // Keep traces for failed tests
       },
       // dependencies: ['setup'], // Temporarily commented out to bypass network issues
     },

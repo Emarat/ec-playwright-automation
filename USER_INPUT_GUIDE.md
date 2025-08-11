@@ -15,7 +15,9 @@ The test supports multi-environment configuration through `.env` file and intera
 Run the interactive script to select election type and environment:
 
 ```bash
-node scripts/run-election-test.js
+npm test
+# OR
+node scripts/run-all-tests.js
 ```
 
 This will show you a menu like:

@@ -14,12 +14,24 @@ Bengali Election Commission Schedule Creation Test Automation
 2. **Run Interactive Test**:
 
    ```bash
-   node scripts/run-election-test.js
+   # Complete test suite (recommended)
+   npm test
+
+   # Or run the script directly
+   node scripts/run-all-tests.js
    ```
 
-3. **Or Run Directly**:
+3. **Or Run Individual Tests**:
+
    ```bash
-   npx playwright test tests/scheduleCreation.spec.js
+   # Schedule creation only
+   npm run test:schedule
+
+   # Settings creation only
+   npm run test:settings
+
+   # Configuration check
+   npm run test:config
    ```
 
 ## 📋 Features
@@ -59,7 +71,7 @@ See [USER_INPUT_GUIDE.md](./USER_INPUT_GUIDE.md) for detailed configuration opti
 ├── config/
 │   └── environmentConfig.js # Environment-aware configuration
 ├── scripts/
-│   └── run-election-test.js # Interactive test runner
+│   └── run-all-tests.js # Complete interactive test runner
 ├── tests/
 │   └── scheduleCreation.spec.js # Main test file
 ├── pages/
