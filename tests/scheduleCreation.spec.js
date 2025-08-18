@@ -1,5 +1,4 @@
 const { test, expect } = require('@playwright/test');
-const { LoginPage } = require('../pages/LoginPage');
 const { ScheduleCreationPage } = require('../pages/scheduleCreation');
 const environmentConfig = require('../config/environmentConfig');
 
@@ -16,10 +15,9 @@ function generateElectionData() {
     'সিটি কর্পোরেশন নির্বাচন',
   ];
 
-  // Get election type from environmentConfig configuration or environment variable
+  // Get election type from environment variable or use random selection
   let electionType;
-  const userElectionType =
-    environmentConfig.electionType || process.env.ELECTION_TYPE;
+  const userElectionType = process.env.ELECTION_TYPE;
 
   if (userElectionType) {
     // Check if the provided election type is valid
@@ -60,33 +58,41 @@ function generateElectionData() {
 
   const electionName = `${electionType} টেস্ট ${currentDateStr} ${currentTimeStr}`;
 
-  // Generate dates with proper intervals (minimum 2-3 days gap between events)
-  const baseDate = new Date(currentDate);
-  baseDate.setDate(baseDate.getDate() + 30); // Start 30 days from now
+  // Generate dates based on specified gaps pattern:
+  // electionDate (base) -- current date (today)
+  // nominationSubmissionDate -- base date + 15 days (future)
+  // nominationScrutinyDate -- base date + 16 days (future)
+  // nominationScrutinyEndDate -- base date + 21 days (future)
+  // appealSubmissionDate -- base date + 22 days (future)
+  // appealDisposalDate -- base date + 32 days (future)
+  // withdrawalDate -- base date + 34 days (future)
+  // symbolAllotmentDate -- base date + 35 days (future)
+  // votingDate -- base date + 51 days (future - October 8th)
+  // gazettePublicationDate -- same day as electionDate (base date/today)
+
+  const baseDate = new Date(currentDate); // Use current date as base (today)
 
   const dates = {
-    electionDate: new Date(baseDate),
+    electionDate: new Date(baseDate), // Base date (today)
     nominationSubmissionDate: new Date(
-      baseDate.getTime() + 3 * 24 * 60 * 60 * 1000
-    ), // +3 days
+      baseDate.getTime() + 15 * 24 * 60 * 60 * 1000
+    ), // +15 days from base (future)
     nominationScrutinyDate: new Date(
-      baseDate.getTime() + 7 * 24 * 60 * 60 * 1000
-    ), // +7 days
+      baseDate.getTime() + 16 * 24 * 60 * 60 * 1000
+    ), // +16 days from base (future)
     nominationScrutinyEndDate: new Date(
-      baseDate.getTime() + 9 * 24 * 60 * 60 * 1000
-    ), // +9 days
-    appealSubmissionDate: new Date(
-      baseDate.getTime() + 12 * 24 * 60 * 60 * 1000
-    ), // +12 days
-    appealDisposalDate: new Date(baseDate.getTime() + 15 * 24 * 60 * 60 * 1000), // +15 days
-    withdrawalDate: new Date(baseDate.getTime() + 18 * 24 * 60 * 60 * 1000), // +18 days
-    symbolAllotmentDate: new Date(
       baseDate.getTime() + 21 * 24 * 60 * 60 * 1000
-    ), // +21 days
-    votingDate: new Date(baseDate.getTime() + 25 * 24 * 60 * 60 * 1000), // +25 days
-    gazettePublicationDate: new Date(
-      baseDate.getTime() + 28 * 24 * 60 * 60 * 1000
-    ), // +28 days
+    ), // +21 days from base (future)
+    appealSubmissionDate: new Date(
+      baseDate.getTime() + 22 * 24 * 60 * 60 * 1000
+    ), // +22 days from base (future)
+    appealDisposalDate: new Date(baseDate.getTime() + 32 * 24 * 60 * 60 * 1000), // +32 days from base (future)
+    withdrawalDate: new Date(baseDate.getTime() + 34 * 24 * 60 * 60 * 1000), // +34 days from base (future)
+    symbolAllotmentDate: new Date(
+      baseDate.getTime() + 35 * 24 * 60 * 60 * 1000
+    ), // +35 days from base (future)
+    votingDate: new Date(baseDate.getTime() + 51 * 24 * 60 * 60 * 1000), // +51 days from base (future - October 8th)
+    gazettePublicationDate: new Date(baseDate), // Same day as electionDate (base date/today)
   };
 
   // Format dates and times

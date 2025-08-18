@@ -551,55 +551,632 @@ class ScheduleCreationPage {
     }
     await this.selectElectionArea(electionDetails.electionArea);
 
-    // Enhanced date/time picker handler based on working Playwright code
-    const fillDateTime = async (dateInputId, timeInputName, date, time) => {
+    // Enhanced date/time picker handler with month navigation support
+    const fillDateTime = async (
+      dateInputId,
+      timeInputName,
+      date,
+      time,
+      fieldIndex = 0
+    ) => {
       try {
-        // Click date input using ID with .first() to avoid strict mode
-        const dateInput = this.page.locator(`#${dateInputId}`).first();
+        if (!date) {
+          console.warn(`No date provided for ${dateInputId}`);
+          return;
+        }
+
+        // Parse target date
+        const [year, month, day] = date.split('-').map(Number);
+        const targetDate = new Date(year, month - 1, day); // month is 0-indexed in JS Date
+        const currentDate = new Date();
+
+        console.log(
+          `Filling ${dateInputId} with date: ${date} (${day}/${month}/${year})`
+        );
+
+        // Click date input using ID with field index to handle multiple fields with same ID
+        const dateInput =
+          fieldIndex === 0
+            ? this.page.locator(`#${dateInputId}`).first()
+            : this.page.locator(`#${dateInputId}`).nth(fieldIndex);
         await dateInput.click({ force: true });
 
-        // Wait a moment for the calendar to appear
+        // Wait for calendar to appear
         await this.page.waitForTimeout(500);
 
-        // Extract day from date and click it
-        const day = parseInt(date.split('-')[2], 10);
+        // Check if we need to navigate to a different month
+        const needMonthNavigation =
+          targetDate.getMonth() !== currentDate.getMonth() ||
+          targetDate.getFullYear() !== currentDate.getFullYear();
 
-        // Try different selectors for day selection with more specific targeting
+        if (needMonthNavigation) {
+          console.log(
+            `Need to navigate to ${month}/${year} for ${dateInputId}`
+          );
+
+          // Take a screenshot before month navigation for debugging
+          await this.page
+            .screenshot({
+              path: `test-artifacts/calendar-before-${dateInputId}.png`,
+            })
+            .catch(() => {});
+
+          // First, try to detect the current month header dynamically
+          let currentMonthText = '';
+          const monthDetectionSelectors = [
+            '.react-datepicker__current-month',
+            '.calendar-header',
+            'h2',
+            'h3',
+            'h4',
+            '[class*="month-year"]',
+            '[class*="header"]',
+          ];
+
+          for (const selector of monthDetectionSelectors) {
+            try {
+              const elements = this.page.locator(selector);
+              const count = await elements.count();
+              for (let i = 0; i < count; i++) {
+                const text = await elements.nth(i).textContent();
+                if (
+                  text &&
+                  (text.includes('2025') ||
+                    text.includes('August') ||
+                    text.includes('September'))
+                ) {
+                  currentMonthText = text.trim();
+                  console.log(
+                    `Detected current month header: "${currentMonthText}" using ${selector}`
+                  );
+                  break;
+                }
+              }
+              if (currentMonthText) break;
+            } catch (e) {
+              continue;
+            }
+          }
+
+          // Enhanced month header selectors including dynamic detection
+          const monthHeaderSelectors = [
+            currentMonthText ? `text="${currentMonthText}"` : null,
+            currentMonthText ? `button:has-text("${currentMonthText}")` : null,
+            'text="August 2025"', // Fallback to known text
+            'text="September 2025"',
+            'text="October 2025"',
+            'button:has-text("August")',
+            'button:has-text("September")',
+            'button:has-text("2025")',
+            '.react-datepicker__current-month',
+            '.calendar-header button',
+            '.calendar-header',
+            'button[class*="month"]',
+            '[data-testid="month-selector"]',
+            '.datepicker-month-header',
+            'h3',
+            'h2',
+            'h4',
+            // More generic selectors
+            '[role="button"]:has-text("August")',
+            '[role="button"]:has-text("2025")',
+            'div[class*="picker"] button',
+            '.picker-header button',
+          ].filter(Boolean);
+
+          let monthSelectorOpened = false;
+          for (const selector of monthHeaderSelectors) {
+            try {
+              const monthHeader = this.page.locator(selector).first();
+              if (await monthHeader.isVisible({ timeout: 1000 })) {
+                console.log(`Trying month header selector: ${selector}`);
+                await monthHeader.click();
+                await this.page.waitForTimeout(800);
+
+                // Enhanced month selector detection
+                const monthChecks = [
+                  'text="January"',
+                  'text="February"',
+                  'text="March"',
+                  'text="April"',
+                  'button:has-text("January")',
+                  'button:has-text("February")',
+                  'div:has-text("January")',
+                  'div:has-text("February")',
+                  '[data-month="0"]', // January = 0
+                  '[data-month="1"]', // February = 1
+                  '.month-option',
+                  '.picker-month',
+                  '[class*="month"]',
+                ];
+
+                for (const monthCheck of monthChecks) {
+                  const monthOptions = this.page.locator(monthCheck);
+                  if (await monthOptions.isVisible({ timeout: 1000 })) {
+                    monthSelectorOpened = true;
+                    console.log(
+                      `Month selector opened, found months using: ${monthCheck}`
+                    );
+                    break;
+                  }
+                }
+
+                if (monthSelectorOpened) {
+                  console.log(`✓ Opened month selector using: ${selector}`);
+                  // Take screenshot after opening month selector
+                  await this.page
+                    .screenshot({
+                      path: `test-artifacts/month-selector-opened-${dateInputId}.png`,
+                    })
+                    .catch(() => {});
+                  break;
+                }
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+
+          if (monthSelectorOpened) {
+            // Select target month with enhanced selectors
+            const monthNames = [
+              'January',
+              'February',
+              'March',
+              'April',
+              'May',
+              'June',
+              'July',
+              'August',
+              'September',
+              'October',
+              'November',
+              'December',
+            ];
+            const targetMonthName = monthNames[month - 1];
+
+            try {
+              const monthSelectors = [
+                `text="${targetMonthName}"`,
+                `button:has-text("${targetMonthName}")`,
+                `div:has-text("${targetMonthName}")`,
+                `[data-month="${month - 1}"]`,
+                `[data-value="${month - 1}"]`,
+                `[data-value="${targetMonthName}"]`,
+                `.month-${month}`,
+                `.month-${targetMonthName.toLowerCase()}`,
+              ];
+
+              let monthSelected = false;
+              for (const monthSel of monthSelectors) {
+                try {
+                  const monthOption = this.page.locator(monthSel).first();
+                  if (await monthOption.isVisible({ timeout: 2000 })) {
+                    await monthOption.click();
+                    await this.page.waitForTimeout(500);
+                    monthSelected = true;
+                    console.log(
+                      `✓ Selected month: ${targetMonthName} using ${monthSel}`
+                    );
+                    break;
+                  }
+                } catch (e) {
+                  continue;
+                }
+              }
+
+              if (!monthSelected) {
+                console.warn(`Could not select month ${targetMonthName}`);
+                // Take debug screenshot
+                await this.page
+                  .screenshot({
+                    path: `test-artifacts/month-selection-failed-${dateInputId}.png`,
+                  })
+                  .catch(() => {});
+              }
+            } catch (e) {
+              console.warn(
+                `Failed to select month ${targetMonthName}: ${e.message}`
+              );
+            }
+          } else {
+            console.warn(
+              'Could not open month selector, trying navigation arrows and alternative methods'
+            );
+
+            // Enhanced approach: Try multiple month navigation strategies
+            const currentMonth = currentDate.getMonth() + 1; // 1-indexed
+            const currentYear = currentDate.getFullYear();
+            const monthDiff = month - currentMonth;
+            const yearDiff = year - currentYear;
+
+            console.log(
+              `Current: ${currentMonth}/${currentYear}, Target: ${month}/${year}, Diff: ${monthDiff} months, ${yearDiff} years`
+            );
+
+            // Strategy 1: Look for next/previous navigation arrows
+            if (monthDiff > 0 || yearDiff > 0) {
+              console.log(
+                `Need to navigate ${monthDiff + yearDiff * 12} months forward`
+              );
+
+              // Enhanced next button selectors based on common calendar implementations
+              const nextSelectors = [
+                'div:nth-child(3) > svg', // Based on your original manual code
+                'button[aria-label="Next Month"]',
+                'button[aria-label="next month"]',
+                'button[title="Next Month"]',
+                '.react-datepicker__navigation--next',
+                '.react-datepicker__navigation-icon--next',
+                '.calendar-next',
+                '.picker-next',
+                '.datepicker-next',
+                'svg[data-testid="ArrowForwardIosIcon"]',
+                'button:has(svg[data-testid="ArrowForwardIosIcon"])',
+                '.navigation-next',
+                'button[class*="next"]',
+                '[data-testid="next-month"]',
+                '[data-testid="chevron-right"]',
+                '.chevron-right',
+                'button:has(.fa-chevron-right)',
+                'button:has(.fa-angle-right)',
+                'button > svg[viewBox*="chevron"]',
+                'button > .icon-next',
+                'button > .arrow-right',
+                // Generic approaches
+                'button:nth-child(3)', // Often the right arrow is 3rd button
+                'svg:nth-child(3)', // Your original working selector pattern
+                'div:nth-child(3) button',
+                '.header button:last-child',
+                '.calendar-header button:last-child',
+              ];
+
+              const totalMonthsToNavigate = Math.min(
+                monthDiff + yearDiff * 12,
+                12
+              ); // Limit to 12 months max
+
+              for (let i = 0; i < totalMonthsToNavigate; i++) {
+                let navigated = false;
+
+                for (const nextSel of nextSelectors) {
+                  try {
+                    const nextBtn = this.page.locator(nextSel).first();
+                    const isVisible = await nextBtn.isVisible({ timeout: 500 });
+                    const isEnabled = await nextBtn
+                      .isEnabled()
+                      .catch(() => true);
+
+                    if (isVisible && isEnabled) {
+                      console.log(`Trying next navigation with: ${nextSel}`);
+                      await nextBtn.click({ force: true });
+                      await this.page.waitForTimeout(500); // Wait for calendar to update
+                      navigated = true;
+                      console.log(
+                        `✓ Navigated forward ${
+                          i + 1
+                        }/${totalMonthsToNavigate} using: ${nextSel}`
+                      );
+                      break;
+                    }
+                  } catch (e) {
+                    continue;
+                  }
+                }
+
+                if (!navigated) {
+                  console.warn(
+                    `Could not navigate forward for step ${
+                      i + 1
+                    }/${totalMonthsToNavigate}`
+                  );
+                  break;
+                }
+              }
+            } else if (monthDiff < 0) {
+              console.log(
+                `Need to navigate ${Math.abs(monthDiff)} months backward`
+              );
+
+              // Enhanced previous button selectors
+              const prevSelectors = [
+                'button[aria-label="Previous Month"]',
+                'button[aria-label="previous month"]',
+                'button[title="Previous Month"]',
+                '.react-datepicker__navigation--previous',
+                '.react-datepicker__navigation-icon--previous',
+                '.calendar-prev',
+                '.picker-prev',
+                '.datepicker-prev',
+                'svg[data-testid="ArrowBackIosIcon"]',
+                'button:has(svg[data-testid="ArrowBackIosIcon"])',
+                '.navigation-prev',
+                'button[class*="prev"]',
+                '[data-testid="prev-month"]',
+                '[data-testid="chevron-left"]',
+                '.chevron-left',
+                'button:has(.fa-chevron-left)',
+                'button:has(.fa-angle-left)',
+                'button > .icon-prev',
+                'button > .arrow-left',
+                // Generic approaches
+                'button:first-child', // Often the left arrow is first button
+                '.header button:first-child',
+                '.calendar-header button:first-child',
+              ];
+
+              for (let i = 0; i < Math.min(Math.abs(monthDiff), 6); i++) {
+                let navigated = false;
+                for (const prevSel of prevSelectors) {
+                  try {
+                    const prevBtn = this.page.locator(prevSel).first();
+                    if (
+                      (await prevBtn.isVisible({ timeout: 500 })) &&
+                      (await prevBtn.isEnabled().catch(() => true))
+                    ) {
+                      await prevBtn.click({ force: true });
+                      await this.page.waitForTimeout(500);
+                      navigated = true;
+                      console.log(
+                        `✓ Navigated backward ${i + 1} using: ${prevSel}`
+                      );
+                      break;
+                    }
+                  } catch (e) {
+                    continue;
+                  }
+                }
+                if (!navigated) {
+                  console.warn(`Could not navigate backward for step ${i + 1}`);
+                  break;
+                }
+              }
+            }
+
+            // Strategy 2: Try alternative month selection methods
+            console.log('Trying alternative month navigation methods...');
+
+            // Method 2a: Try clicking on month name/year separately
+            const monthYearSelectors = [
+              `text="${month}/${year}"`,
+              `text="${year}-${month.toString().padStart(2, '0')}"`,
+              `button:has-text("${year}")`,
+              `select[name*="month"]`,
+              `select[name*="year"]`,
+              `input[name*="month"]`,
+              `input[name*="year"]`,
+            ];
+
+            for (const selector of monthYearSelectors) {
+              try {
+                const element = this.page.locator(selector).first();
+                if (await element.isVisible({ timeout: 1000 })) {
+                  console.log(`Found month/year control: ${selector}`);
+                  await element.click();
+                  await this.page.waitForTimeout(300);
+                  // Additional logic could be added here to select specific month/year
+                }
+              } catch (e) {
+                continue;
+              }
+            }
+
+            // Strategy 3: Direct header manipulation based on original manual approach
+            console.log('Trying direct calendar header interaction...');
+
+            // Based on your original working manual code patterns
+            const headerSelectors = [
+              'div.react-datepicker__header',
+              'div[class*="calendar-header"]',
+              'div[class*="picker-header"]',
+              '.datepicker-header',
+              '.calendar-month-header',
+              '.picker-month-year',
+            ];
+
+            for (const headerSel of headerSelectors) {
+              try {
+                const header = this.page.locator(headerSel).first();
+                if (await header.isVisible({ timeout: 1000 })) {
+                  console.log(`Found calendar header: ${headerSel}`);
+
+                  // Try to find and click navigation elements within header
+                  const headerNavSelectors = [
+                    `${headerSel} div:nth-child(3)`, // Your original pattern
+                    `${headerSel} div:nth-child(3) > svg`,
+                    `${headerSel} button:last-child`,
+                    `${headerSel} svg:last-child`,
+                    `${headerSel} [class*="next"]`,
+                    `${headerSel} [class*="forward"]`,
+                    `${headerSel} [aria-label*="next"]`,
+                  ];
+
+                  if (monthDiff > 0 || yearDiff > 0) {
+                    for (const navSel of headerNavSelectors) {
+                      try {
+                        const navElement = this.page.locator(navSel).first();
+                        if (await navElement.isVisible({ timeout: 500 })) {
+                          console.log(`Clicking navigation element: ${navSel}`);
+                          for (
+                            let i = 0;
+                            i < Math.min(monthDiff + yearDiff * 12, 12);
+                            i++
+                          ) {
+                            await navElement.click({ force: true });
+                            await this.page.waitForTimeout(400);
+                            console.log(`Navigation step ${i + 1} completed`);
+                          }
+                          break;
+                        }
+                      } catch (e) {
+                        continue;
+                      }
+                    }
+                  }
+                  break;
+                }
+              } catch (e) {
+                continue;
+              }
+            }
+
+            // Strategy 4: Keyboard navigation as final fallback
+            console.log('Trying keyboard navigation...');
+            try {
+              // Focus on calendar input field
+              await calendarInput.focus();
+
+              if (monthDiff > 0) {
+                // Use arrow keys to navigate months
+                for (let i = 0; i < Math.min(monthDiff, 12); i++) {
+                  await this.page.keyboard.press('PageDown'); // Often navigates to next month
+                  await this.page.waitForTimeout(200);
+                }
+              } else if (monthDiff < 0) {
+                for (let i = 0; i < Math.min(Math.abs(monthDiff), 12); i++) {
+                  await this.page.keyboard.press('PageUp'); // Often navigates to previous month
+                  await this.page.waitForTimeout(200);
+                }
+              }
+            } catch (e) {
+              console.warn('Keyboard navigation failed:', e.message);
+            }
+          }
+        }
+
+        // Enhanced day selection with multiple strategies
         const daySelectors = [
-          `role=button[name="${day}"]`,
           `text="${day}"`,
+          `button:has-text("${day}")`,
           `div:has-text("${day}"):not(:has(div))`,
           `span:has-text("${day}")`,
           `.calendar-day:has-text("${day}")`,
           `[data-day="${day}"]`,
+          `[data-date="${day}"]`,
+          `[data-value="${day}"]`,
+          `.day-${day}`,
+          `button[aria-label*="${day}"]`,
+          `td:has-text("${day}")`,
+          `.react-datepicker__day:has-text("${day}")`,
+          `.picker-day:has-text("${day}")`,
         ];
 
         let dayClicked = false;
         for (const selector of daySelectors) {
           try {
-            const dayElement = this.page.locator(selector).first();
-            if (await dayElement.isVisible({ timeout: 1000 })) {
-              await dayElement.click({ force: true });
-              dayClicked = true;
-              break;
+            const dayElements = this.page.locator(selector);
+            const count = await dayElements.count();
+
+            // If multiple days with same number, try each one
+            for (let i = 0; i < count; i++) {
+              const dayElement = dayElements.nth(i);
+              if (await dayElement.isVisible({ timeout: 1000 })) {
+                // Additional check: make sure it's not disabled
+                const isDisabled = await dayElement
+                  .evaluate(
+                    (el) =>
+                      el.hasAttribute('disabled') ||
+                      el.classList.contains('disabled') ||
+                      el.classList.contains('react-datepicker__day--disabled')
+                  )
+                  .catch(() => false);
+
+                if (!isDisabled) {
+                  await dayElement.click({ force: true });
+                  dayClicked = true;
+                  console.log(
+                    `✓ Selected day ${day} using selector: ${selector} (element ${i})`
+                  );
+                  break;
+                }
+              }
             }
+
+            if (dayClicked) break;
           } catch (e) {
             continue;
           }
         }
 
         if (!dayClicked) {
-          // Fallback: use Today button if available
+          console.warn(`Could not select day ${day} for ${dateInputId}`);
+
+          // Advanced fallback strategies
+          console.log(`Trying advanced fallback strategies for day ${day}`);
+
+          // Strategy 1: Try clicking anywhere on the calendar first to ensure it's active
           try {
-            const todayButton = this.page.getByRole('button', {
-              name: 'Today',
-            });
-            if (await todayButton.isVisible({ timeout: 1000 })) {
-              await todayButton.click();
-              dayClicked = true;
+            const calendarSelectors = [
+              '.react-datepicker',
+              '.calendar',
+              '.picker',
+              '[class*="datepicker"]',
+              '[class*="calendar"]',
+            ];
+
+            for (const calSel of calendarSelectors) {
+              const calendar = this.page.locator(calSel).first();
+              if (await calendar.isVisible({ timeout: 1000 })) {
+                await calendar.click();
+                await this.page.waitForTimeout(200);
+                break;
+              }
             }
           } catch (e) {
-            // Continue with time selection
+            // ignore
+          }
+
+          // Strategy 2: Try using keyboard navigation
+          try {
+            await this.page.keyboard.press('Home'); // Go to first day of month
+            await this.page.waitForTimeout(100);
+
+            // Press Arrow Right (day-1) times to reach target day
+            for (let i = 1; i < day; i++) {
+              await this.page.keyboard.press('ArrowRight');
+              await this.page.waitForTimeout(50);
+            }
+
+            await this.page.keyboard.press('Enter');
+            console.log(`Used keyboard navigation to select day ${day}`);
+            dayClicked = true;
+          } catch (e) {
+            console.warn(`Keyboard navigation failed: ${e.message}`);
+          }
+
+          // Strategy 3: Direct input value setting (last resort)
+          if (!dayClicked) {
+            try {
+              await dateInput.fill(date);
+              await dateInput.evaluate((el, val) => {
+                el.value = val;
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                el.dispatchEvent(new Event('blur', { bubbles: true }));
+              }, date);
+              console.log(`✓ Used fallback direct input for ${dateInputId}`);
+
+              // Verify the value was set
+              const setValue = await dateInput.evaluate((el) => el.value);
+              if (setValue.includes(day.toString()) || setValue === date) {
+                dayClicked = true;
+                console.log(`✓ Direct input value verified: ${setValue}`);
+              }
+            } catch (e) {
+              console.warn(`Fallback input setting failed: ${e.message}`);
+            }
+          }
+
+          // Final strategy: Take screenshot for debugging
+          if (!dayClicked) {
+            await this.page
+              .screenshot({
+                path: `test-artifacts/day-selection-failed-${dateInputId}-${day}.png`,
+              })
+              .catch(() => {});
+            console.warn(
+              `❌ All strategies failed for ${dateInputId} day ${day}`
+            );
           }
         }
 
@@ -639,79 +1216,24 @@ class ScheduleCreationPage {
       null
     );
 
-    // Handle nomination scrutiny start date (first field)
-    try {
-      const firstNominationInput = this.page
-        .locator('#dateOfNominationSelectionStart')
-        .first();
-      await firstNominationInput.click({ force: true });
-      await this.page.waitForTimeout(500);
-
-      const day = parseInt(
-        electionDetails.nominationScrutinyDate.split('-')[2],
-        10
-      );
-      const dayElement = this.page.locator(`text="${day}"`).first();
-      if (await dayElement.isVisible({ timeout: 2000 })) {
-        await dayElement.click({ force: true });
-      }
-
-      // Click time buttons
-      const timeButtons = ['00:', ':00'];
-      for (const buttonText of timeButtons) {
-        try {
-          const timeButton = this.page.getByRole('button', {
-            name: buttonText,
-          });
-          if (await timeButton.isVisible({ timeout: 500 })) {
-            await timeButton.click({ force: true });
-          }
-        } catch (e) {
-          // Ignore
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to fill first nomination scrutiny date:', e.message);
-    }
+    // Fill nomination scrutiny dates using enhanced fillDateTime method
+    await fillDateTime(
+      'dateOfNominationSelectionStart',
+      null,
+      electionDetails.nominationScrutinyDate,
+      null,
+      0 // First field (index 0)
+    );
 
     // Handle nomination scrutiny end date (second field with same ID)
     if (electionDetails.nominationScrutinyEndDate) {
-      try {
-        const secondNominationInput = this.page
-          .locator('#dateOfNominationSelectionStart')
-          .nth(1);
-        await secondNominationInput.click({ force: true });
-        await this.page.waitForTimeout(500);
-
-        const day = parseInt(
-          electionDetails.nominationScrutinyEndDate.split('-')[2],
-          10
-        );
-        const dayElement = this.page.locator(`text="${day}"`).first();
-        if (await dayElement.isVisible({ timeout: 2000 })) {
-          await dayElement.click({ force: true });
-        }
-
-        // Click time buttons
-        const timeButtons = ['00:', ':00'];
-        for (const buttonText of timeButtons) {
-          try {
-            const timeButton = this.page.getByRole('button', {
-              name: buttonText,
-            });
-            if (await timeButton.isVisible({ timeout: 500 })) {
-              await timeButton.click({ force: true });
-            }
-          } catch (e) {
-            // Ignore
-          }
-        }
-      } catch (e) {
-        console.warn(
-          'Failed to fill second nomination scrutiny date:',
-          e.message
-        );
-      }
+      await fillDateTime(
+        'dateOfNominationSelectionStart',
+        null,
+        electionDetails.nominationScrutinyEndDate,
+        null,
+        1 // Second field (index 1)
+      );
     }
 
     await fillDateTime(
